@@ -1,0 +1,314 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sinestesia</title>
+<link rel="preload" href="fonts/jetbrains-mono-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="fonts/major-mono-display-400.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/style.css">
+
+<canvas id="gl"></canvas>
+<canvas id="fx" aria-label="Sound surface: move the mouse to shape the sound, hold to play"></canvas>
+
+<header class="topbar hud">
+    <div class="brand">
+        <h1>sinestesia</h1>
+        <div class="status" id="status">waiting</div>
+    </div>
+</header>
+
+<aside class="drawer" id="drawer" aria-label="Controls" aria-hidden="true" inert>
+    <div class="drawer-head">
+        <span>controls</span>
+        <button class="chip" id="drawer-close" type="button" aria-label="Close the controls">✕</button>
+    </div>
+
+    <section class="dsec">
+        <h4>Modes</h4>
+        <button class="mode-btn" id="b-journey" data-needs="journey" aria-pressed="false" type="button">✦ Start the journey</button>
+        <button class="mode-btn" id="b-radio" data-needs="radio" aria-pressed="false" type="button">📻 Pirate radio</button>
+        <button class="mode-btn" id="b-duet" data-needs="duet" aria-pressed="false" type="button">👥 Duet with a friend</button>
+    </section>
+
+    <section class="dsec">
+        <h4>Mix</h4>
+        <div class="row">
+            <label for="bpm">BPM</label>
+            <input type="range" id="bpm" min="90" max="160" step="1" value="128">
+            <output id="bpm-o">128</output>
+        </div>
+        <div class="row">
+            <label for="inten">Visions</label>
+            <input type="range" id="inten" min="0" max="1" step="0.01" value="0.6">
+            <output id="inten-o">60</output>
+        </div>
+    </section>
+
+    <section class="dsec">
+        <h4>Scenes</h4>
+        <div class="chips" id="scenes"></div>
+    </section>
+
+    <section class="dsec">
+        <h4>Instruments</h4>
+        <div class="chips two">
+            <button class="chip" id="b-drums" aria-pressed="true" type="button">Kick</button>
+            <button class="chip" id="b-quant" aria-pressed="true" type="button">Quantize</button>
+            <button class="chip" id="b-voices" aria-pressed="true" type="button">Voices</button>
+        </div>
+        <div class="chips two">
+            <button class="chip" id="b-echo" aria-pressed="true" type="button">Phrase echo</button>
+            <button class="chip" id="b-machine" data-needs="machine" aria-pressed="false" type="button">⌁ Machine</button>
+            <button class="chip" id="b-seq" aria-pressed="false" type="button">Sequencer</button>
+        </div>
+        <button class="chip" id="b-spells" data-needs="spells" aria-pressed="true" type="button">✶ Spells (hold and draw)</button>
+        <button class="chip" id="b-keys" data-needs="keys" aria-pressed="false" type="button">On-screen keys</button>
+    </section>
+
+    <section class="dsec">
+        <h4>Sources</h4>
+        <div class="chips half">
+            <button class="chip" id="b-file" data-needs="files" type="button">Open file</button>
+            <button class="chip" id="b-btc" data-needs="bitcoin" aria-pressed="false" type="button">₿ Blockchain</button>
+        </div>
+        <input type="file" id="file-in" hidden>
+    </section>
+
+    <section class="dsec">
+        <h4>Session</h4>
+        <div class="chips half">
+            <button class="chip rec" id="b-rec" data-needs="record" aria-pressed="false" type="button">● Record</button>
+            <button class="chip" id="b-full" type="button">Fullscreen</button>
+        </div>
+        <div class="chips half">
+            <button class="chip" id="b-hide" type="button">Hide everything</button>
+            <button class="chip" id="b-forget" type="button">Forget the memory</button>
+        </div>
+    </section>
+
+    <section class="dsec">
+        <h4>Details</h4>
+        <dl class="readout">
+            <dt>Source</dt><dd id="r-phrase">sinestesia</dd>
+            <dt>Sha-256</dt><dd id="r-hash">…</dd>
+            <dt>Scale</dt><dd id="r-scale">…</dd>
+            <dt>Tempo</dt><dd id="r-bpm">128 BPM · bar 0</dd>
+            <dt>Scene</dt><dd id="r-scene">Liquid</dd>
+        </dl>
+        <div class="sigils" id="sigils" aria-label="Sigils of the phrases you played: click one to bring its groove back"></div>
+    </section>
+
+    <section class="dsec howto">
+        <h4>How to play</h4>
+        <ul>
+            <li><b>Keyboard</b> every letter is a note, numbers play arpeggios, <kbd>⌫</kbd> makes a glitch</li>
+            <li><b>Enter</b> the phrase you typed becomes a new groove</li>
+            <li><b>Mouse</b> left and right opens the filter, up and down adds echo</li>
+            <li><b>Hold the button</b> to play a tuned theremin</li>
+            <li data-needs="files"><b>Files</b> drop one on the page to hear it</li>
+            <li data-needs="spells"><b>Spells</b> hold and draw: triangle fire, circle water, square time, spiral vortex, zigzag lightning</li>
+            <li data-needs="radio"><b>Radio</b> drag the dial, scroll, or use the arrows (<kbd>Shift</kbd> to jump)</li>
+            <li data-needs="studio"><b>Studio</b> build up to eight patterns, chain them into a song, hold the Live FX pads, let Madness vary each bar</li>
+            <li><b><kbd>Tab</kbd></b> changes the scene, <b><kbd>Esc</kbd></b> closes the controls</li>
+        </ul>
+    </section>
+</aside>
+
+<button class="chip" id="hud-toggle" type="button">Show</button>
+
+<div id="toast" class="toast" role="status" hidden></div>
+
+<div class="title-card" id="title-card" aria-hidden="true">
+    <span id="tc-kicker"></span>
+    <strong id="tc-title"></strong>
+</div>
+
+<div class="bottom hud">
+    <div class="btc" id="btc" data-needs="bitcoin" hidden>
+        <div><span>Source</span><b id="btc-source">…</b></div>
+        <div><span>Block</span><b id="btc-height">…</b></div>
+        <div><span>Since last</span><b id="btc-age">0:00</b></div>
+        <div><span>Tx per minute</span><b id="btc-tx">0</b></div>
+        <div><span>Mempool (tx)</span><b id="btc-mempool">–</b></div>
+        <div><span>Fast fee</span><b id="btc-fee">–</b></div>
+        <div class="btc-bar" title="Tension: it builds while the network searches for the next block"><i id="btc-tension"></i></div>
+    </div>
+    <section class="studio" id="studio" data-needs="studio" hidden aria-label="Studio">
+        <div class="stu-head">
+            <span class="stu-title">studio</span>
+            <span id="stu-pos">bar 0 · step 1</span>
+            <div class="stu-actions">
+                <button class="chip" id="stu-rand" type="button">Random drums</button>
+                <button class="chip" id="stu-clear" type="button">Clear drums</button>
+                <button class="chip" id="stu-close" type="button">Close</button>
+            </div>
+        </div>
+
+        <div class="stu-sub">
+            <h5>Patterns</h5>
+            <span class="stu-help">Click a slot and it takes over at the next bar. An empty slot starts as a copy of the one playing.</span>
+        </div>
+        <div class="stu-slots" id="stu-slots" role="group" aria-label="Pattern slots"></div>
+        <div class="stu-song">
+            <label for="stu-song">Song</label>
+            <input id="stu-song" maxlength="64" placeholder="chain the slots, e.g. AABA CCDB" autocomplete="off" spellcheck="false">
+            <label for="stu-spb">Bars per letter</label>
+            <select id="stu-spb"><option value="1">1</option><option value="2" selected>2</option><option value="4">4</option><option value="8">8</option></select>
+            <button class="chip" id="stu-play-song" aria-pressed="false" type="button">▶ Play song</button>
+        </div>
+
+        <div class="stu-sub">
+            <h5>Live FX</h5>
+            <span class="stu-help">Hold a pad to play it. With Latch on, a click switches it on and off, so you can stack them.</span>
+            <div class="stu-actions"><button class="chip" id="stu-latch" aria-pressed="false" type="button">Latch</button></div>
+        </div>
+        <div class="stu-pads" id="stu-pads" role="group" aria-label="Live effects">
+            <button class="stu-pad" data-fx="r4" data-group="repeat" aria-pressed="false" type="button">Repeat ¼</button>
+            <button class="stu-pad" data-fx="r8" data-group="repeat" aria-pressed="false" type="button">Repeat ⅛</button>
+            <button class="stu-pad" data-fx="r16" data-group="repeat" aria-pressed="false" type="button">Roll 1/16</button>
+            <button class="stu-pad" data-fx="up" data-group="filter" aria-pressed="false" type="button">Sweep up</button>
+            <button class="stu-pad" data-fx="down" data-group="filter" aria-pressed="false" type="button">Sweep down</button>
+            <button class="stu-pad" data-fx="tape" aria-pressed="false" type="button">Tape stop</button>
+            <button class="stu-pad" data-fx="freeze" aria-pressed="false" type="button">Freeze</button>
+            <button class="stu-pad" data-fx="crush" aria-pressed="false" type="button">Crush</button>
+            <button class="stu-pad" data-fx="pump" aria-pressed="false" type="button">Pump</button>
+        </div>
+        <div class="stu-mad">
+            <div class="row"><label for="stu-mad">Madness</label><input type="range" id="stu-mad" min="0" max="1" step="0.01" value="0"><output id="stu-mad-o">0</output></div>
+            <button class="chip" id="stu-keep" type="button">Keep this bar</button>
+            <span class="stu-help">Each bar mutates: extra hits, rolls, notes that wander. Your pattern stays safe unless you keep a bar.</span>
+        </div>
+
+        <div class="stu-sub">
+            <h5>Drums</h5>
+            <span class="stu-help">Click a step: on, accent, roll, off. The two numbers spread hits evenly (Euclidean) and rotate them.</span>
+            <div class="row stu-swing"><label for="stu-swing">Swing</label><input type="range" id="stu-swing" min="0" max="0.5" step="0.01" value="0.08"><output id="stu-swing-o">8</output></div>
+        </div>
+        <div class="stu-scroll"><div class="stu-grid" id="stu-drums"></div></div>
+
+        <div class="stu-sub">
+            <h5>Acid bass</h5>
+            <span class="stu-help">Click a note to switch it on or off; drag up or down, scroll, or use the arrow keys to change its pitch. Arm Rec motion and turn a knob while the loop plays: the knob repeats your move every bar.</span>
+            <div class="stu-actions">
+                <button class="chip" id="stu-acid" type="button">Random acid line</button>
+                <button class="chip" id="stu-left" type="button" aria-label="Shift the bass line one step left">◀ Shift</button>
+                <button class="chip" id="stu-right" type="button" aria-label="Shift the bass line one step right">Shift ▶</button>
+                <button class="chip" id="stu-rec" aria-pressed="false" type="button">● Rec motion</button>
+                <button class="chip" id="stu-unrec" type="button">Clear motion</button>
+            </div>
+        </div>
+        <div class="stu-scroll"><div class="stu-grid" id="stu-bass"></div></div>
+        <div class="stu-knobs">
+            <div><div class="row"><label for="stu-k-cutoff">Cutoff</label><input type="range" id="stu-k-cutoff" min="0" max="1" step="0.01"><output id="stu-k-cutoff-o">0</output></div><div class="stu-lane" id="stu-lane-cutoff" hidden></div></div>
+            <div><div class="row"><label for="stu-k-reso">Resonance</label><input type="range" id="stu-k-reso" min="0" max="1" step="0.01"><output id="stu-k-reso-o">0</output></div><div class="stu-lane" id="stu-lane-reso" hidden></div></div>
+            <div><div class="row"><label for="stu-k-env">Env mod</label><input type="range" id="stu-k-env" min="0" max="1" step="0.01"><output id="stu-k-env-o">0</output></div><div class="stu-lane" id="stu-lane-env" hidden></div></div>
+            <div><div class="row"><label for="stu-k-decay">Decay</label><input type="range" id="stu-k-decay" min="0" max="1" step="0.01"><output id="stu-k-decay-o">0</output></div><div class="stu-lane" id="stu-lane-decay" hidden></div></div>
+            <div><div class="row"><label for="stu-k-drive">Drive</label><input type="range" id="stu-k-drive" min="0" max="1" step="0.01"><output id="stu-k-drive-o">0</output></div><div class="stu-lane" id="stu-lane-drive" hidden></div></div>
+        </div>
+
+        <div class="stu-sub"><h5>Mixer</h5></div>
+        <div class="stu-knobs">
+            <div class="row"><label for="stu-v-bass">Bass</label><input type="range" id="stu-v-bass" min="0" max="1" step="0.01"><output id="stu-v-bass-o">0</output></div>
+            <div class="row"><label for="stu-v-pad">Pad</label><input type="range" id="stu-v-pad" min="0" max="1" step="0.01"><output id="stu-v-pad-o">0</output></div>
+            <div class="row"><label for="stu-v-lead">Keys</label><input type="range" id="stu-v-lead" min="0" max="1" step="0.01"><output id="stu-v-lead-o">0</output></div>
+        </div>
+        <div class="stu-kills" role="group" aria-label="Kill switches">
+            <button class="chip" id="stu-kill-low" aria-pressed="false" type="button">Kill low</button>
+            <button class="chip" id="stu-kill-mid" aria-pressed="false" type="button">Kill mid</button>
+            <button class="chip" id="stu-kill-high" aria-pressed="false" type="button">Kill high</button>
+        </div>
+
+        <div class="stu-sub"><h5>Share</h5><span class="stu-help">Your track is saved in this browser as you go. To share it, copy the link: whoever opens it hears this track. The code is the same track as text.</span></div>
+        <div class="stu-share">
+            <input id="stu-code" placeholder="paste a track code (SNS1-…)" aria-label="Track code" autocomplete="off" spellcheck="false">
+            <button class="chip" id="stu-link" type="button">Copy link</button>
+            <button class="chip" id="stu-copy" type="button">Copy code</button>
+            <button class="chip" id="stu-load" type="button">Load code</button>
+        </div>
+    </section>
+    <section class="duet" id="duet" data-needs="duet" hidden aria-label="Duet">
+        <div class="du-head"><span>Duet</span><span id="du-state">connecting…</span></div>
+        <div class="du-people" id="du-people"></div>
+        <div class="du-roles" id="du-roles" role="group" aria-label="Your instrument">
+            <button class="chip" data-role="melody" aria-pressed="true" type="button">Melody</button>
+            <button class="chip" data-role="bells" aria-pressed="false" type="button">Bells</button>
+            <button class="chip" data-role="voice" aria-pressed="false" type="button">Voice</button>
+            <button class="chip" data-role="machine" aria-pressed="false" type="button">Machine</button>
+        </div>
+        <div class="du-row">
+            <label for="du-name">Your name</label>
+            <input id="du-name" maxlength="16" placeholder="guest" autocomplete="off" spellcheck="false">
+        </div>
+        <div class="du-row">
+            <input id="du-link" readonly aria-label="The link to this duet">
+            <button class="chip" id="du-copy" type="button">Copy link</button>
+        </div>
+        <p class="du-hint" id="du-hint">Send this link to a friend. When they open it and press Play, you play together: each of you hears everything, with the instrument the other one picked.</p>
+    </section>
+    <section class="radio" id="radio" data-needs="radio" hidden aria-label="Pirate shortwave radio">
+        <div class="rd-head"><span id="rd-freq">6.00 MHz</span><span id="rd-name">static</span></div>
+        <div class="rd-dial" id="rd-dial" tabindex="0" role="slider" aria-label="Radio tuning" aria-valuemin="2.5" aria-valuemax="12" aria-valuenow="6">
+            <div class="rd-scale" id="rd-scale"></div>
+            <div id="rd-needle"></div>
+        </div>
+        <div class="rd-signal"><i id="rd-signal"></i></div>
+    </section>
+    <section class="story" id="story" data-needs="story" hidden aria-live="polite">
+        <div class="st-head"><span id="st-chapter"></span><span id="st-step"></span></div>
+        <div class="st-lines" id="st-lines"></div>
+        <div class="st-task"><span id="st-task"></span><div class="st-meter"><i id="st-meter"></i></div></div>
+        <div class="st-actions" id="st-actions"></div>
+    </section>
+    <div class="term" id="term" hidden aria-live="polite"></div>
+    <div class="journey" id="journey" data-needs="journey" hidden>
+        <div class="j-head"><span id="j-name">Journey</span><span id="j-count"></span></div>
+        <div class="j-track" id="j-track"></div>
+    </div>
+    <div class="seq" id="seq" hidden aria-label="The acid bass sequence, made from the phrase's hash"></div>
+    <div class="tip" id="tip" data-needs="tips" role="status" hidden>
+        <span id="tip-text"></span>
+        <button class="tip-x" id="tip-skip" type="button" aria-label="Hide the tips" title="Hide the tips">✕</button>
+    </div>
+    <div class="keys" id="keys" data-needs="keys" role="group" aria-label="Notes to tap" hidden></div>
+    <!-- the dock: the typing line with the few controls you reach for while playing -->
+    <div class="dock">
+        <div class="dock-group dock-left">
+            <button class="dock-btn icon" id="b-pause" type="button" aria-pressed="false" aria-label="Pause" title="Pause"></button>
+            <button class="dock-btn scene" id="d-scene" type="button" title="Next scene (Tab)" aria-label="Next scene">Liquid</button>
+            <label class="dock-vol" title="Volume"><span aria-hidden="true">vol</span><input type="range" id="vol" min="0" max="1" step="0.01" value="0.8" aria-label="Volume"></label>
+        </div>
+        <form class="prompt" id="prompt" autocomplete="off">
+            <input id="type" maxlength="80" placeholder="type to play · Enter for a groove" aria-label="Type to play">
+        </form>
+        <div class="dock-group dock-right">
+            <button class="dock-btn to-story" id="b-adventure" data-needs="story" aria-pressed="false" type="button" title="The Signal: a story in thirteen chapters, about twenty minutes">✧ Story</button>
+            <button class="dock-btn to-studio" id="b-studio" data-needs="studio" aria-pressed="false" type="button" title="The console: drums, acid bass, patterns, live effects">Studio</button>
+            <button class="dock-btn menu" id="menu-btn" type="button" aria-expanded="false" aria-controls="drawer">Controls</button>
+        </div>
+    </div>
+</div>
+
+<div class="epilogue" id="epilogue" data-needs="story" hidden>
+    <div class="ep-card">
+        <canvas id="ep-sigil" width="240" height="240" aria-hidden="true"></canvas>
+        <div class="ep-kicker" id="ep-kicker">Epilogue</div>
+        <h2 id="ep-title"></h2>
+        <dl class="ep-facts" id="ep-facts"></dl>
+        <blockquote id="ep-quote"></blockquote>
+        <div class="ep-actions">
+            <button class="mode-btn primary" id="ep-save" type="button">Save the keepsake</button>
+            <button class="mode-btn" id="ep-play" type="button">Keep playing</button>
+            <button class="mode-btn" id="ep-again" type="button">Start over</button>
+        </div>
+    </div>
+</div>
+
+<div id="start">
+    <div class="start-card">
+        <h2>sinestesia</h2>
+        <p>A playground where what you type and how you move become techno and visions. Type, move, hold, draw: everything plays.</p>
+        <button id="go" type="button">Play</button>
+        <p class="start-memory" id="start-memory" hidden></p>
+        <p class="warn">Best with headphones. The sound starts quietly and grows on its own. Contains moving lights and intense colours: if you are sensitive to flashing light, turn down “Visions” in the controls.</p>
+    </div>
+</div>
+
+<script type="module" src="js/main.js"></script>
