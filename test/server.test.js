@@ -3,6 +3,7 @@
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
 import zlib from 'node:zlib';
+import { request } from 'node:http';
 import { WebSocket } from 'ws';
 import { createApp } from '../server/app.js';
 
@@ -16,6 +17,15 @@ const wsBase = `ws://127.0.0.1:${port}/ws`;
 app.server.unref();
 
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+// a request with the headers as given (fetch sets Host itself, and unpacks bodies): the status, the headers, the raw bytes
+const ask = (path, headers = {}) => new Promise((resolve, reject) => {
+    request(`${base}${path}`, { headers }, res => {
+        const chunks = [];
+        res.on('data', c => chunks.push(c));
+        res.on('end', () => resolve({ status: res.statusCode, headers: res.headers, raw: Buffer.concat(chunks) }));
+    }).on('error', reject).end();
+});
 
 describe('static files', () => {
     test('the page is served with its security headers', async () => {
@@ -49,16 +59,48 @@ describe('static files', () => {
     });
 
     test('a brotli body unpacks to the file', async () => {
-        // fetch unpacks bodies itself, so read the raw bytes through http
-        const { request } = await import('node:http');
-        const raw = await new Promise((resolve, reject) => {
-            request(`${base}/js/main.js`, { headers: { 'accept-encoding': 'br' } }, res => {
-                const chunks = [];
-                res.on('data', c => chunks.push(c));
-                res.on('end', () => resolve(Buffer.concat(chunks)));
-            }).on('error', reject).end();
-        });
+        const { raw } = await ask('/js/main.js', { 'accept-encoding': 'br' });
         assert.match(zlib.brotliDecompressSync(raw).toString(), /import/);
+    });
+
+    test('the page says what it is, to browsers and to the chats a link is pasted in', async () => {
+        const html = await (await fetch(`${base}/`)).text();
+        assert.match(html, /^<!doctype html>\s*<html lang="en">/);
+        assert.match(html, /<meta name="description" content="[^"]{50,}">/);
+        // the preview image is given by its whole address, at the address the page was asked at
+        const image = html.match(/<meta property="og:image" content="([^"]+)">/)[1];
+        assert.equal(image, `${base}/img/preview.jpg`);
+        const picture = await fetch(image);
+        assert.equal(picture.headers.get('content-type'), 'image/jpeg');
+        assert.deepEqual([...Buffer.from(await picture.arrayBuffer()).subarray(0, 3)], [0xff, 0xd8, 0xff]);
+        for (const [file, type] of [['icon.svg', 'image/svg+xml'], ['icon-180.png', 'image/png']]) {
+            assert.ok(html.includes(`href="img/${file}"`), file);
+            const icon = await fetch(`${base}/img/${file}`);
+            assert.equal(icon.status, 200);
+            assert.equal(icon.headers.get('content-type'), type);
+        }
+    });
+
+    test('behind a proxy, the preview image has the public address', async () => {
+        const proxied = { host: 'sinestesia.example', 'x-forwarded-proto': 'https' };
+        const image = /<meta property="og:image" content="https:\/\/sinestesia\.example\/img\/preview\.jpg">/;
+        const page = await ask('/?track=SNS1-abc', proxied);
+        assert.match(page.raw.toString(), image);
+        const packed = await ask('/', { ...proxied, 'accept-encoding': 'br' });
+        assert.match(zlib.brotliDecompressSync(packed.raw).toString(), image);
+        // each address is its own version of the page, with its own tag
+        const local = await ask('/');
+        assert.notEqual(page.headers.etag, local.headers.etag);
+        assert.equal((await ask('/', { ...proxied, 'if-none-match': page.headers.etag })).status, 304);
+        assert.equal((await ask('/', { 'if-none-match': page.headers.etag })).status, 200);
+    });
+
+    test('a host that is not a plain name is never written into the page', async () => {
+        const page = await ask('/', { host: 'x"><script>alert(1)</script>' });
+        assert.equal(page.status, 200);
+        assert.doesNotMatch(page.raw.toString(), /alert\(1\)/);
+        assert.match(page.raw.toString(), /<meta property="og:image" content="img\/preview\.jpg">/);
+        assert.doesNotMatch(page.headers['content-security-policy'], /alert/);
     });
 
     test('the fonts are served from here, as they are', async () => {

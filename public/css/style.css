@@ -624,7 +624,7 @@ body.dropping::after {
 .stu-trow.right .stu-cell[data-v="1"], .stu-trow.right .stu-cell[data-v="2"] { box-shadow: 0 0 10px var(--cool); }
 /* while borrowed, the Studio is only the three drum rows she asks for */
 .studio.guest > :not(.stu-head, .stu-sub:has(+ .stu-scroll #stu-drums), .stu-scroll:has(#stu-drums)),
-.studio.guest #stu-rand, .studio.guest .stu-swing,
+.studio.guest #stu-rand, .studio.guest #stu-swap, .studio.guest .stu-swing,
 .studio.guest .stu-trow:is([data-track="open"], [data-track="rim"], [data-track="perc"]) { display: none; }
 /* in a height-capped panel the blocks keep their size and the panel scrolls instead */
 .studio > * { flex-shrink: 0; }
@@ -864,6 +864,8 @@ body.dropping::after {
     .studio.guest .stu-euc { grid-column: 11 / -1; grid-row: 1; justify-content: flex-end; }
     .studio.guest .stu-cell { grid-row: 2; height: 30px; }
     .studio.guest .stu-ms, .studio.guest .stu-vol, .studio.guest .stu-help { display: none; }
+    /* the Studio's top row stays on one line: "Swap tracks" is just "Swap" */
+    .stu-wide { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

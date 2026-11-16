@@ -1,7 +1,7 @@
 // The page on a phone (a Pixel 7, with touch): nothing spills off the screen, the keys are there to tap,
 // and the story's Studio chapter fits the width.
 import { test, expect } from '@playwright/test';
-import { play, storyAt, watchErrors } from './helpers.js';
+import { play, storyAt, trackCode, watchErrors } from './helpers.js';
 
 let errors;
 test.beforeEach(({ page }) => { errors = watchErrors(page); });
@@ -40,4 +40,15 @@ test('the factory: sixteen steps a row, all on screen, tapped', async ({ page })
     }
     for (const i of [0, 4, 8, 12]) await cells.nth(i).tap();
     await expect(page.locator('#stu-drums .stu-trow[data-track="kick"]')).toHaveClass(/right/);
+});
+
+test('the Studio keeps its top row on one line, with a track kept aside', async ({ page }) => {
+    await page.addInitScript(kept => localStorage.setItem('sinestesia-track-kept', JSON.stringify(kept)), [trackCode(121)]);
+    await play(page);
+    await page.locator('#b-studio').tap();
+    const tops = await page.locator('.stu-head .chip:visible').evaluateAll(chips => chips.map(c => Math.round(c.getBoundingClientRect().top)));
+    expect(tops).toHaveLength(4);
+    expect(new Set(tops).size).toBe(1);
+    await page.locator('#stu-swap').tap();
+    await expect(page.locator('#toast')).toContainText('Swapped');
 });

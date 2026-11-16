@@ -12,6 +12,8 @@ test('the page plays, and asks nothing of any other host', async ({ page }) => {
     page.on('request', r => { if (!r.url().startsWith('http://127.0.0.1')) foreign.push(r.url()); });
     await play(page);
     await expect(page.locator('#b-adventure')).toBeVisible();
+    // the page is laid out by the standard rules, and says what language it is in
+    expect(await page.evaluate(() => [document.compatMode, document.documentElement.lang])).toEqual(['CSS1Compat', 'en']);
     expect(await page.evaluate(async () => (await import('/js/core/audio.js')).ac?.state)).toBe('running');
     expect(await page.evaluate(() => [...document.fonts].filter(f => f.status === 'loaded').length)).toBeGreaterThan(0);
     expect(foreign).toEqual([]);

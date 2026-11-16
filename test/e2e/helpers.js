@@ -84,3 +84,7 @@ export function shapes(cx, cy, r) {
         square: poly([[cx - r, cy - r], [cx + r, cy - r], [cx + r, cy + r], [cx - r, cy + r]])
     };
 }
+
+// a whole Studio track as its code, the way a link or the browser's storage holds it, and what a code holds
+export const trackCode = bpm => 'SNS1-' + Buffer.from(JSON.stringify({ v: 2, bpm, sc: 'Minor', r: 33, sl: [{ g: '1000100010001000' }] })).toString('base64url');
+export const readCode = code => JSON.parse(Buffer.from(code.replace(/^SNS1-/, ''), 'base64url').toString());

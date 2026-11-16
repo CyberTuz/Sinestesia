@@ -24,6 +24,7 @@ Sinestesia is a playground: **Play** starts it, and everything else is reached f
   - Live FX pads: beat repeat, filter sweeps, tape stop, freeze, bitcrush, sidechain pump.
   - Motion recording for the acid knobs, and a Madness knob that varies every bar.
   - The track is saved in the browser as you go, and travels in a link (`?track=…`) or as a code (`SNS1-…`).
+  - A track that arrives in a link or a code never erases yours: the one you had is kept aside (up to four of them), and **Swap tracks** brings it back.
 - **Free play**: every key is a note, Enter turns the phrase you typed into a groove through its SHA-256 hash, the mouse drives the filter and the echo. On a touch screen a row of keys plays the groove's scale, and on a first visit a few short tips show the way.
 - **Duet**: everyone who opens the same link (`?duet=…`) plays together, each with their own instrument.
 - **Bitcoin mode**: live transactions and blocks become notes. It connects to the public feeds of blockchain.info and mempool.space, and falls back to a simulation when they are unreachable.
@@ -38,12 +39,14 @@ The browser side is plain HTML, CSS and JavaScript with no build step: the Web A
 server/             one Node process, one dependency (ws)
   server.js         starts the server on $PORT, clean shutdown on SIGTERM
   app.js            the HTTP server and /healthz
-  static.js         serves public/ with security headers, ETags and brotli/gzip compression
+  static.js         serves public/ with security headers, ETags and brotli/gzip compression,
+                    and writes the preview image's whole address into the page
   rooms.js          the duet's rooms, a WebSocket at /ws?room=<code>
 public/
   index.html        the markup; a feature's elements carry data-needs="<feature>"
   css/style.css
   fonts/            JetBrains Mono and Major Mono Display (OFL), served from here
+  img/              the icon (the sigil of the word "sinestesia") and the picture a pasted link shows
   js/main.js        starts the music, and imports every feature
   js/core/          always loaded
     state.js        S (the shared state), scales, scenes, small helpers
@@ -90,14 +93,14 @@ The story borrows the radio, the Studio, the spells and the keys through `action
 npm test
 ```
 
-runs the server's tests (`test/server.test.js`): the static files and their headers, compression, the health check and the duet's rooms. It takes a few seconds and needs nothing else.
+runs the server's tests (`test/server.test.js`): the static files and their headers, compression, the link-preview tags, the health check and the duet's rooms. It takes a few seconds and needs nothing else.
 
 ```bash
 npx playwright install chromium
 npm run test:e2e
 ```
 
-runs the browser tests (`test/e2e/`) in a headless Chromium, against a server of their own on port 3123. `story.spec.js` plays each chapter of the story the way a player would and checks that the next one begins, and the three endings; `phone.spec.js` opens the page as a Pixel 7 with touch. They take a few minutes, because each chapter waits for her lines and for whole bars of music. The first command downloads the browser, once.
+runs the browser tests (`test/e2e/`) in a headless Chromium, against a server of their own on port 3123. `story.spec.js` plays each chapter of the story the way a player would and checks that the next one begins, and the three endings; `studio.spec.js` opens track links and codes and checks that your own track is never lost; `phone.spec.js` opens the page as a Pixel 7 with touch. They take a few minutes, because each chapter waits for her lines and for whole bars of music. The first command downloads the browser, once.
 
 The page loads nothing from other hosts, fonts included; the only outside connections are the Bitcoin mode's two public feeds.
 

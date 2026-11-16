@@ -1,6 +1,23 @@
+<!doctype html>
+<html lang="en">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Sinestesia</title>
+<meta name="description" content="A techno playground in your browser: what you type and how you move become acid bass lines, drums and psychedelic visions. Nothing to install.">
+<meta name="theme-color" content="#05040a">
+<link rel="icon" href="img/icon-180.png" type="image/png" sizes="180x180">
+<link rel="icon" href="img/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="img/icon-180.png">
+<!-- what a link to this page shows when it is pasted in a chat; our server writes the image's whole address -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Sinestesia">
+<meta property="og:title" content="Sinestesia: a techno playground in your browser">
+<meta property="og:description" content="What you type and how you move become acid bass lines, drums and psychedelic visions. Press Play.">
+<meta property="og:image" content="img/preview.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The word sinestesia under its sigil, a glowing geometric glyph, inside rings of coloured polygons">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="preload" href="fonts/jetbrains-mono-400.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="fonts/major-mono-display-400.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="css/style.css">
@@ -138,6 +155,7 @@
             <div class="stu-actions">
                 <button class="chip" id="stu-rand" type="button">Random drums</button>
                 <button class="chip" id="stu-clear" type="button">Clear drums</button>
+                <button class="chip" id="stu-swap" type="button" hidden title="Another track is kept aside: this brings it back, and keeps aside the one playing">⇄ Swap<span class="stu-wide"> tracks</span><span id="stu-kept"></span></button>
                 <button class="chip" id="stu-close" type="button">Close</button>
             </div>
         </div>
@@ -216,7 +234,7 @@
             <button class="chip" id="stu-kill-high" aria-pressed="false" type="button">Kill high</button>
         </div>
 
-        <div class="stu-sub"><h5>Share</h5><span class="stu-help">Your track is saved in this browser as you go. To share it, copy the link: whoever opens it hears this track. The code is the same track as text.</span></div>
+        <div class="stu-sub"><h5>Share</h5><span class="stu-help">Your track is saved in this browser as you go. To share it, copy the link: whoever opens it hears this track. The code is the same track as text. A track that arrives in a link or a code never erases yours: yours is kept aside, and “Swap tracks” at the top brings it back.</span></div>
         <div class="stu-share">
             <input id="stu-code" placeholder="paste a track code (SNS1-…)" aria-label="Track code" autocomplete="off" spellcheck="false">
             <button class="chip" id="stu-link" type="button">Copy link</button>

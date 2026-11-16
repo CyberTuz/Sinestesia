@@ -455,14 +455,33 @@ function studioCode() {
     return 'SNS1-' + b64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-// a pasted code is untrusted text: every field is checked and clamped before it touches the music
-function loadCode(code) {
-    let d;
+// what a code holds, or null when it is not a code
+function readCode(code) {
     try {
         const raw = String(code).trim().replace(/^SNS1-/, '').replace(/-/g, '+').replace(/_/g, '/');
-        d = JSON.parse(decodeURIComponent(escape(atob(raw))));
-    } catch (e) { return false; }
-    if (!d || (d.v !== 1 && d.v !== 2) || !SCALES[d.sc]) return false;
+        return JSON.parse(decodeURIComponent(escape(atob(raw))));
+    } catch (e) { return null; }
+}
+
+// the same music: two codes that differ only in the slot showing and the scene on screen
+function sameTrack(a, b) {
+    if (!a || !b) return false;
+    if (a === b) return true;
+    const music = code => {
+        const d = readCode(code);
+        if (!d) return null;
+        delete d.cur;
+        delete d.scn;
+        return JSON.stringify(d);
+    };
+    const m = music(a);
+    return m !== null && m === music(b);
+}
+
+// a pasted code is untrusted text: every field is checked and clamped before it touches the music
+function loadCode(code) {
+    const d = readCode(code);
+    if (!d || (d.v !== 1 && d.v !== 2) || !Array.isArray(SCALES[d.sc])) return false;
     const num = (v, lo, hi, dflt) => (typeof v === 'number' && isFinite(v) ? Math.min(hi, Math.max(lo, v)) : dflt);
     let slots, cur = 0;
     if (d.v === 2 && Array.isArray(d.sl)) {
@@ -690,35 +709,89 @@ function openStudio() {
     buildStudio();
     applyLevels();
     // the story's grid starts empty; your own track comes back the next time you open the Studio yourself
-    if (!STUDIO.restored && !guest) restoreTrack();
-    if (!guest) giveHerRhythm();
+    const aside = !STUDIO.restored && !guest && restoreTrack();
+    // the note about a track kept aside stays on screen: hers can wait
+    if (!guest) giveHerRhythm(aside);
     renderStudio();
     $('#studio').hidden = false;
     $('#b-studio').setAttribute('aria-pressed', 'true');
 }
 
 // ── the track survives a reload, and travels in a link ──
-const TRACK_KEY = 'sinestesia-track';
-let savedCode = '';
+const TRACK_KEY = 'sinestesia-track', KEPT_KEY = 'sinestesia-track-kept', COPY_KEY = 'sinestesia-track-copy';
+const KEEP = 4;
+// the track as it was last saved; the tracks kept aside, the last one left first; the last link's track as it arrived
+let savedCode = '', kept = [], copyCode = '';
 
-// the first time the Studio opens: the track in the link if there is one, otherwise the one saved here
+const stored = key => { try { return localStorage.getItem(key) || ''; } catch (e) { return ''; } };
+function store(key, value) {
+    try {
+        if (value) localStorage.setItem(key, value); else localStorage.removeItem(key);
+    } catch (e) { /* storage full or blocked: the link still works */ }
+}
+const storeKept = () => store(KEPT_KEY, kept.length ? JSON.stringify(kept) : '');
+
+// the button that brings a kept track back is there only while one is kept
+function showKept() {
+    $('#stu-swap').hidden = !kept.length;
+    $('#stu-kept').textContent = kept.length > 1 ? ` (${kept.length})` : '';
+}
+
+// Another track (from a link, or a pasted code) takes the place of the one you had, whose code is `had`,
+// and yours is kept aside: "Swap tracks" brings it back. A link's track you never changed is not kept,
+// because its link still holds it. Returns '' when the code cannot be read, 'aside' when a track was kept.
+function takeTrack(code, had, fromLink) {
+    if (!loadCode(code)) return '';
+    const now = studioCode();
+    const replaced = !!had && !sameTrack(had, now);
+    let aside = false, over = '';
+    if (replaced) {
+        const copy = c => sameTrack(c, copyCode);
+        kept = kept.filter(c => !sameTrack(c, now) && !sameTrack(c, had) && !copy(c));
+        if (!copy(had)) { kept.unshift(had); aside = true; }
+        // no room for a fifth: the oldest one is handed back as a code
+        if (kept.length > KEEP) over = kept.pop();
+    }
+    // opening the link of the track you already have does not make it the link's
+    if (fromLink && (replaced || !had)) copyCode = now;
+    savedCode = now;
+    store(TRACK_KEY, now);
+    store(COPY_KEY, copyCode);
+    storeKept();
+    showKept();
+    let note = fromLink ? 'Track loaded from the link.' : 'Track loaded.';
+    if (aside) note += ` ${fromLink ? 'Yours' : 'The one you had'} is kept aside: “Swap tracks” brings it back.`;
+    if (over) {
+        $('#stu-code').value = over;
+        note += ' There was no room left for the oldest one: its code is in the code box under Share, copy it to keep it.';
+    }
+    toast(note, over ? 14000 : aside ? 8000 : undefined);
+    return aside ? 'aside' : 'loaded';
+}
+
+// the first time the Studio opens: the track in the link if there is one, otherwise the one saved here.
+// Returns true when a track was kept aside, and the note that says so must stay on screen.
 function restoreTrack() {
     STUDIO.restored = true;
     const url = new URL(location.href);
     const fromLink = url.searchParams.get('track');
-    let saved = '';
-    try { saved = localStorage.getItem(TRACK_KEY) || ''; } catch (e) { /* nothing saved */ }
+    const saved = stored(TRACK_KEY);
+    try { kept = JSON.parse(stored(KEPT_KEY) || '[]').filter(c => typeof c === 'string').slice(0, KEEP); } catch (e) { kept = []; }
+    copyCode = stored(COPY_KEY);
     if (fromLink) {
         // the link has done its job; from now on reloads bring back your own edits
         url.searchParams.delete('track');
         history.replaceState(null, '', url);
-        if (loadCode(fromLink)) { toast('Track loaded from the link.'); return; }
+        const took = takeTrack(fromLink, saved, true);
+        if (took) return took === 'aside';
         toast('The track in that link could not be read.');
     }
     if (saved && loadCode(saved)) {
         savedCode = saved;
-        toast('Your track is back where you left it.');
+        if (!fromLink) toast('Your track is back where you left it.');
     }
+    showKept();
+    return false;
 }
 
 function saveTrack() {
@@ -965,8 +1038,21 @@ $('#stu-copy').onclick = () => {
         .catch(() => { field.select(); toast('Select the code in the box and copy it.'); });
 };
 $('#stu-load').onclick = () => {
-    if (loadCode($('#stu-code').value)) toast('Track loaded.');
-    else toast('That code could not be read. Track codes start with SNS1-.');
+    if (!takeTrack($('#stu-code').value, studioCode())) toast('That code could not be read. Track codes start with SNS1-.');
+};
+// the next track kept aside comes back, and the one playing takes its place at the end of the line
+$('#stu-swap').onclick = () => {
+    if (guest || !kept.length) return;
+    const had = studioCode(), next = kept.shift();
+    if (loadCode(next)) {
+        kept = kept.filter(c => !sameTrack(c, had));
+        kept.push(had);
+        savedCode = studioCode();
+        store(TRACK_KEY, savedCode);
+        toast('Swapped: the track you just left is kept aside.');
+    } else toast('That track could not be read, so it was dropped.');
+    storeKept();
+    showKept();
 };
 $('#stu-link').onclick = () => {
     const link = trackLink();
@@ -1008,13 +1094,16 @@ actions.studioGuestEnd = keep => {
 };
 
 // the rhythm rebuilt in the story fills slot H, when slot H is free
-function giveHerRhythm() {
+function giveHerRhythm(quiet) {
     const her = MEMORY?.herRhythm;
     if (gaveRhythm || !her || STUDIO.slots[7] || STUDIO.cur === 7) return;
     gaveRhythm = true;
+    const copy = sameTrack(studioCode(), copyCode);
     const grid = Object.fromEntries(TRACKS.map(tr => [tr.id, Array.from({ length: 16 }, (_, i) => (String(her[tr.id] || '')[i] === '1' ? 1 : 0))]));
     STUDIO.slots[7] = { ...snapshot(), grid };
-    toast('Slot H holds her rhythm, the one you rebuilt in the story.');
+    // her rhythm arriving is not a change of yours: a link's track still counts as the link's
+    if (copy) { store(COPY_KEY, copyCode = studioCode()); saveTrack(); }
+    if (!quiet) toast('Slot H holds her rhythm, the one you rebuilt in the story.');
 }
 
 // while the Studio is open it plays the groove its own way: its drum grid, the bass step it picks
