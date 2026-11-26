@@ -1,8 +1,52 @@
-# Sinestesia
+<p align="center">
+  <a href="https://sinestesia.lol/"><img src="public/img/preview.jpg" alt="sinestesia: type, move, draw, everything plays" width="720"></a>
+</p>
 
-A techno playground in a web page. What you type and how you move the mouse become music and visions: acid bass lines, drums and psychedelic shader scenes, all synthesized live in the browser with no samples.
+<h1 align="center">sinestesia</h1>
 
-## Run it
+<p align="center">
+  <b>A techno playground in your browser.</b><br>
+  You type, it plays. You move the mouse, it bends. You draw a triangle, things catch fire.<br>
+  <br>
+  👉 <a href="https://sinestesia.lol/"><b>sinestesia.lol</b></a> 👈<br>
+  <sub>(headphones on, volume down, then press Play)</sub>
+</p>
+
+---
+
+## What is this?
+
+Synesthesia is when your senses get their wires crossed and you start *hearing colours*. This is that, but on purpose, and with an acid bass line.
+
+Everything is synthesized live in the browser: no samples, no plugins, no account, nothing to install. Just a page that turns whatever you do into techno and psychedelic visuals.
+
+It was made for fun. It is still being made for fun. That is the whole business plan.
+
+## Things to try
+
+- ⌨️ **Type anything.** Every letter is a note. Press **Enter** and your phrase becomes a whole groove, picked from its SHA-256 hash. The same words always give the same music, so yes, your name has a song. Go find out what it sounds like.
+- 🖱️ **Move the mouse.** It opens the filter and stretches the echo. Hold the button and you get a theremin.
+- ✍️ **Draw shapes** on the screen: a circle, a triangle, a square, a spiral… Each one is a spell. We will not tell you what they do.
+- 🎛️ **Open the Studio**, a little groovebox:
+  - a six-track drum grid with accents and rolls;
+  - an acid bass line you can edit note by note;
+  - eight pattern slots you can chain into a song;
+  - live FX pads: beat repeat, tape stop, freeze, bitcrush and friends;
+  - a **Madness** knob, for when your pattern is too well-behaved.
+- 🔗 **Share your track.** It fits entirely in a link. Send it to a friend; their link never overwrites your own track, so nobody gets hurt.
+- 👥 **Duet.** Open the same link on two computers (or with up to eight people) and jam together, each on your own instrument.
+- 📻 **Pirate radio.** Turn the dial. Some stations are not quite stations.
+- ₿ **Bitcoin mode.** Live transactions and blocks from the real network become notes. Finally, a good use for the blockchain.
+
+## 📡 The Signal
+
+There is also a story. Thirteen chapters, about twenty minutes, three endings.
+
+Something is hiding in the noise and it is trying to talk to you. Every chapter is a small musical puzzle, and together they quietly teach you everything the playground can do. No spoilers here; just press **✧ Story**.
+
+Your progress is saved, so you can leave and come back. The full script, spoilers and all, is in [`docs/the-signal.md`](docs/the-signal.md).
+
+## Run it yourself
 
 You need Node 18 or newer.
 
@@ -11,81 +55,65 @@ npm install
 npm start
 ```
 
-Then visit `http://localhost:3000` in a recent browser (Chrome, Edge or Firefox). Turn the volume down before you press Play. The port comes from the `PORT` environment variable when it is set.
+Then open <http://localhost:3000>. The port comes from `PORT` if you set it.
 
-Any static server pointed at `public/` also runs the app (`python -m http.server -d public 8765`); only the duet needs the Node server, because the server holds the rooms.
+No Node? Any static server pointed at `public/` runs everything except the duet:
 
-## What is inside
+```bash
+python -m http.server -d public 8765
+```
 
-Sinestesia is a playground: **Play** starts it, and everything else is reached from the dock at the bottom, around the typing line. The dock keeps pause, the scene and the volume at hand, and opens the story, the Studio (the advanced console) and the full controls.
+### Put it online
 
-- **Studio**: a groovebox with a six-track drum grid (on, accent, roll), an editable acid bass line, a mixer with kill switches and swing.
-  - Eight pattern slots (A–H) switched on the bar line, chained into a song.
-  - Live FX pads: beat repeat, filter sweeps, tape stop, freeze, bitcrush, sidechain pump.
-  - Motion recording for the acid knobs, and a Madness knob that varies every bar.
-  - The track is saved in the browser as you go, and travels in a link (`?track=…`) or as a code (`SNS1-…`).
-  - A track that arrives in a link or a code never erases yours: the one you had is kept aside (up to four of them), and **Swap tracks** brings it back.
-- **Free play**: every key is a note, Enter turns the phrase you typed into a groove through its SHA-256 hash, the mouse drives the filter and the echo. On a touch screen a row of keys plays the groove's scale, and on a first visit a few short tips show the way.
-- **Duet**: everyone who opens the same link (`?duet=…`) plays together, each with their own instrument.
-- **Bitcoin mode**: live transactions and blocks become notes. It connects to the public feeds of blockchain.info and mempool.space, and falls back to a simulation when they are unreachable.
-- **Pirate radio**, spells drawn with the mouse, and a machine improviser.
-- **The Signal**: a story in thirteen chapters (about twenty minutes) that is also a tour of the playground. Each chapter is a musical puzzle, from tuning a signal to rebuilding a rhythm in the Studio, and the story ends one of three ways. Progress is saved after each chapter, so it can be continued on another visit. The script is in `docs/the-signal.md`.
+There is a `Dockerfile`, and that's all you need. With [Coolify](https://coolify.io/) (the way sinestesia.lol runs):
 
-The browser side is plain HTML, CSS and JavaScript with no build step: the Web Audio API for sound, WebGL for the visuals.
+1. Create a resource from this repository and pick the **Dockerfile** build pack.
+2. Set the port to `3000` and the health check path to `/healthz`.
+3. Add your domain. HTTPS and WebSockets just work.
 
-## How the code is laid out
+No database, no secrets, no volumes. One small container is plenty. If you ever run more than one, the players of a duet must land on the same one, because rooms live in memory.
+
+## How it's built
+
+Short version: plain HTML, CSS and JavaScript, with **no build step**. The Web Audio API makes the sound, WebGL makes the visuals, and one tiny Node process with exactly one dependency ([`ws`](https://github.com/websockets/ws)) serves the page and the duet rooms.
 
 ```
-server/             one Node process, one dependency (ws)
-  server.js         starts the server on $PORT, clean shutdown on SIGTERM
+server/             one Node process, one dependency
+  server.js         starts on $PORT, shuts down cleanly on SIGTERM
   app.js            the HTTP server and /healthz
-  static.js         serves public/ with security headers, ETags and brotli/gzip compression,
-                    and writes the preview image's whole address into the page
+  static.js         serves public/ with security headers, ETags and brotli/gzip,
+                    and writes the preview image's full address into the page
   rooms.js          the duet's rooms, a WebSocket at /ws?room=<code>
 public/
   index.html        the markup; a feature's elements carry data-needs="<feature>"
   css/style.css
   fonts/            JetBrains Mono and Major Mono Display (OFL), served from here
-  img/              the icon (the sigil of the word "sinestesia") and the picture a pasted link shows
-  js/main.js        starts the music, and imports every feature
-  js/core/          always loaded
-    state.js        S (the shared state), scales, scenes, small helpers
-    bus.js          events between the core and the features (on, emit, claim, modes, actions)
-    pattern.js      text → SHA-256 → groove, and the sigils
-    audio.js        the audio graph, the bass and pad synths, the live-effect chain
-    instruments.js  drums, lead, bells, the machine's notes, risers, the theremin
-    voices.js       formant voices: chant, choir, whisper, the robot voice
-    sequencer.js    the lookahead scheduler, the drums per genre, the free-play intro
-    direction.js    applies a set described as data (used by the radio and the spells)
-    download.js     hands the viewer a file (the recording, the story's keepsake)
-    hud.js, input.js, overlay.js, visuals.js, shader.js, memory.js
+  img/              the icon (the sigil of the word "sinestesia") and the link preview
+  js/main.js        starts the music and imports every feature
+  js/core/          always loaded: state, event bus, audio graph, instruments,
+                    voices, sequencer, visuals, shaders…
   js/features/      studio, story, journey, machine, mining, radio,
                     spells, duet, files, bitcoin, record, keys, tips
 ```
 
-The core never imports a feature, and a feature never imports another one. Each feature registers itself when it loads: it listens to the core's events (each bar, each step, each frame, the notes and phrases you play), answers the core's questions (who takes a key, what goes on the status line), and offers actions to the others. `public/js/core/bus.js` lists every event.
+### Features are plug-ins (kind of)
 
-### The duet's server
+The core never imports a feature, and features never import each other. Each feature registers itself when it loads: it listens to the core's events (every bar, every step, every frame, every note you play) and offers actions to the others. [`public/js/core/bus.js`](public/js/core/bus.js) lists every event.
 
-A room is just a code in the link. Each page publishes a small presence object (cursor, instrument, name, the groove playing, its last few actions) and the server relays every change to the others in the room; it never interprets the music, and each page checks what it receives. The server also sends its clock, so both pages count bars on the same time. Everything lives in memory: a room disappears with its last player, and a restart only makes the pages reconnect.
-
-Limits, in `server/rooms.js`: 8 players a room, 1000 rooms, 16 KB a message, 60 messages a second a page.
-
-### Removing a feature
-
-1. Delete its line in `public/js/main.js`. Its buttons and panels hide themselves, because the markup marked `data-needs="<feature>"` only shows once that feature loads.
-2. Optionally delete its file in `public/js/features/` and its `data-needs` markup in `public/index.html`.
-
-Features that use another one only when it is there:
+So, to **remove a feature**, delete its line in [`public/js/main.js`](public/js/main.js). That's it. Its buttons hide themselves, because markup tagged `data-needs="<feature>"` only appears once that feature has loaded. The story notices too, and skips the chapters that needed it.
 
 | Feature | Uses, if present | Without it |
 |---|---|---|
-| story | radio, studio, spells, mining | the story skips the chapter played with it (Shortwave, The Factory, The Storm, The Vault) |
+| story | radio, studio, spells, mining | skips the chapter played with it (Shortwave, The Factory, The Storm, The Vault) |
 | story | keys | the Archive chapter is played with the letter keys |
-| story | machine (the "stay" ending) | the ending does not switch the machine on |
+| story | machine | the "stay" ending does not switch the machine on |
 | radio, studio | story | her station, her greeting and her rhythm in slot H never appear |
 
-The story borrows the radio, the Studio, the spells and the keys through `actions` (`radioGuest`, `studioGuest`, `spellsGuest`, `keys`): they open inside the story without stopping it and leave its music alone, and the Studio gives your own track back when the chapter ends.
+### The duet server
+
+A room is just a code in the link. Each page publishes a small "presence" (cursor, instrument, name, the groove it is playing, its last few moves), and the server relays every change to the others. It never interprets the music: each page checks what it receives. The server also shares its clock, so everyone's bars line up.
+
+Limits, in [`server/rooms.js`](server/rooms.js): 8 players a room, 1000 rooms, 16 KB a message, 60 messages a second per page.
 
 ## Tests
 
@@ -93,23 +121,28 @@ The story borrows the radio, the Studio, the spells and the keys through `action
 npm test
 ```
 
-runs the server's tests (`test/server.test.js`): the static files and their headers, compression, the link-preview tags, the health check and the duet's rooms. It takes a few seconds and needs nothing else.
+Server tests: static files, headers, compression, link previews, the health check and the duet rooms. They take a few seconds.
 
 ```bash
 npx playwright install chromium
 npm run test:e2e
 ```
 
-runs the browser tests (`test/e2e/`) in a headless Chromium, against a server of their own on port 3123. `story.spec.js` plays each chapter of the story the way a player would and checks that the next one begins, and the three endings; `studio.spec.js` opens track links and codes and checks that your own track is never lost; `phone.spec.js` opens the page as a Pixel 7 with touch. They take a few minutes, because each chapter waits for her lines and for whole bars of music. The first command downloads the browser, once.
+Browser tests in a headless Chromium:
+- **Story:** a robot plays every chapter of The Signal the way a person would. It taps the heartbeat, tunes the radio, draws the spells and releases the drop on the one. Then it checks all three endings.
+- **Studio:** opens track links and codes and makes sure your own track is never lost.
+- **Phone:** opens the page as a Pixel 7 with a touch screen.
 
-The page loads nothing from other hosts, fonts included; the only outside connections are the Bitcoin mode's two public feeds.
+They take a few minutes, mostly because the story politely waits for whole bars of music.
 
-## Deploying with Coolify
+## Privacy
 
-The repository has a `Dockerfile`, so Coolify can build it as it is.
+The page loads nothing from other hosts, fonts included. No analytics, no cookies, no tracking. What you make is kept only in your own browser. The only outside connections are the two public Bitcoin feeds ([blockchain.info](https://www.blockchain.info/) and [mempool.space](https://mempool.space/)), and only while Bitcoin mode is on.
 
-1. In Coolify, create a resource from this Git repository and pick the **Dockerfile** build pack.
-2. Set the exposed port to `3000`, and the health check path to `/healthz`.
-3. Add your domain. Coolify's proxy serves it over HTTPS, and WebSockets (the duet) pass through it with no extra setting.
+## ⚠️ A friendly warning
 
-There is nothing else to configure: no database, no secrets, no volumes. One instance is enough; if you ever run more than one, the players of a duet must reach the same instance, since the rooms live in its memory.
+Sinestesia has moving lights and intense colours. If you are sensitive to flashing light, turn **Visions** down in the controls; the page also respects your system's *reduce motion* setting. And please mind your ears: it starts quiet, but acid bass is acid bass.
+
+---
+
+<p align="center"><sub>Made for fun. Now go type your name and see what it sounds like.</sub></p>
