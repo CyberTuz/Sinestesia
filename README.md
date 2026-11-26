@@ -143,6 +143,10 @@ The page loads nothing from other hosts, fonts included. No analytics, no cookie
 
 Sinestesia has moving lights and intense colours. If you are sensitive to flashing light, turn **Visions** down in the controls; the page also respects your system's *reduce motion* setting. And please mind your ears: it starts quiet, but acid bass is acid bass.
 
+## License
+
+[MIT](LICENSE): take it, remix it, make it weirder. The fonts in `public/fonts/` keep their own licence, the [SIL Open Font License](public/fonts/OFL.txt).
+
 ---
 
 <p align="center"><sub>Made for fun. Now go type your name and see what it sounds like.</sub></p>
