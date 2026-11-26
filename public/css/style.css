@@ -150,6 +150,12 @@ body.drawer-open .drawer { transform: none; }
 .howto ul { list-style: none; display: grid; gap: 6px; line-height: 1.5; color: var(--muted); }
 .howto b { color: var(--fg); font-weight: 600; }
 
+/* the link to the code, at the foot of the controls and on the start card */
+.source { font-size: 10px; line-height: 1.5; color: var(--muted); }
+.source a { color: var(--cool); text-decoration: underline; text-underline-offset: 3px; }
+.source a:hover, .source a:focus-visible { color: var(--fg); }
+.start-card .source { font-size: 11px; color: var(--muted); }
+
 .row { display: flex; align-items: center; gap: 8px; }
 .row label { width: 72px; flex-shrink: 0; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; font-size: 10px; }
 .row output { width: 34px; text-align: right; font-variant-numeric: tabular-nums; }

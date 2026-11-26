@@ -43,7 +43,9 @@ describe('static files', () => {
     test('the page loads nothing from other hosts but the Bitcoin feeds', async () => {
         const html = await (await fetch(`${base}/`)).text();
         const css = await (await fetch(`${base}/css/style.css`)).text();
-        assert.doesNotMatch(html, /(href|src)="https?:/);
+        // what the page loads: scripts, images, stylesheets, fonts, icons (a link to click is not loaded)
+        assert.doesNotMatch(html, /src="https?:/);
+        assert.doesNotMatch(html, /<link[^>]*href="https?:/);
         assert.doesNotMatch(css, /url\(['"]?https?:/);
     });
 
